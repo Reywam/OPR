@@ -9,6 +9,7 @@ const int SCREEN_WIDTH = 400;
 const int SCREEN_HEIGHT = 480;
 
 const int CHARACTER_SIZE = 40;
+const int END_LEVEL_CHARACTER_SIZE = 20;
 const int HP_TEXT_SHIFT = 120;
 
 const int HERO_HP = 5;
@@ -19,27 +20,24 @@ using namespace std;
 
 struct Background 
 {
-	Texture backgroundTexture;
-
 	Sprite backgroundTop;
 	Sprite backgroundBot;
-
 };
 
 struct Hero
 {
 	Texture heroImage;
 	Sprite heroSprite;
+
 	Music playerShotSound;
 
 	RectangleShape damageArea;
 
 	float speed = 0.2f;
 
-	int hitPoints = 5;
+	int hitPoints = HERO_HP;
 	Text hpText;
 	Font hpFont;
-
 };
 
 struct Enemy
@@ -62,18 +60,39 @@ struct Spawner
 	float spawnTime = 0;
 	int scoreCount = 0;
 	Text score;
-	Font scoreFont;
 };
 
-bool BackgroundInitialization(Background &background)
+struct Resourses
 {
-	if (!background.backgroundTexture.loadFromFile("Resourses/background.png"))
+	Font textFont;
+
+	Texture backgroundImage;
+	Texture shipImage;
+	Texture bulletImage;
+
+	Music shotSound;
+};
+
+bool LoadResourses(Resourses &res)
+{
+	if (
+		!res.textFont.loadFromFile("Resourses/albionic.ttf")
+		|| !res.backgroundImage.loadFromFile("Resourses/background.png")
+		|| !res.shipImage.loadFromFile("Resourses/hero.jpg", IntRect(13, 14, 36, 38))
+		|| !res.shotSound.openFromFile("Resourses/player_shot_sound.wav")
+		|| !res.bulletImage.loadFromFile("Resourses/laser_bullet.png", IntRect(25, 30, 50, 3))
+		)
 	{
 		return false;
 	}
 
-	background.backgroundBot.setTexture(background.backgroundTexture);
-	background.backgroundTop.setTexture(background.backgroundTexture);
+	return true;
+}
+
+bool BackgroundInitialization(Background &background, Resourses const &res)
+{
+	background.backgroundBot.setTexture(res.backgroundImage);
+	background.backgroundTop.setTexture(res.backgroundImage);
 	background.backgroundBot.setPosition(0, 0);
 	background.backgroundTop.setPosition(0, -SCREEN_HEIGHT);
 	background.backgroundBot.setScale(2, 1);
@@ -186,20 +205,17 @@ void CheckBackgroundMove(Background &background)
 	}
 }
 
-bool InitHero(Hero &hero)
+bool InitHero(Hero &hero, Resourses const &res)
 {
-	if (!hero.heroImage.loadFromFile("Resourses/hero.jpg", IntRect(13, 14, 36, 38))
-		|| !hero.playerShotSound.openFromFile("Resourses/player_shot_sound.wav")
-		|| !hero.hpFont.loadFromFile("Resourses/albionic.ttf"))
-	{
-		return false;
-	}
-
+	hero.heroImage = res.shipImage;
 	hero.heroSprite.setTexture(hero.heroImage);
-	hero.heroSprite.setPosition(SCREEN_WIDTH / 2 - 32, SCREEN_HEIGHT - 64);
 
-	hero.hpText.setFont(hero.hpFont);
+	hero.heroSprite.setPosition((float)SCREEN_WIDTH / 2.0f - (float)hero.heroImage.getSize().y,
+		(float)SCREEN_HEIGHT - 2.0f * (float)hero.heroImage.getSize().y);
+
+	hero.hpText.setFont(res.textFont);
 	hero.hpText.setCharacterSize(CHARACTER_SIZE);
+
 	hero.hpText.setPosition(SCREEN_WIDTH - HP_TEXT_SHIFT, 0);
 
 	return true;
@@ -212,6 +228,18 @@ void InitBullet(Bullet &bullet, Vector2f heroPosition)
 	bullet.bulletSprite.setTexture(bullet.bulletImage);
 	bullet.bulletSprite.setPosition(heroPosition + Vector2f(45.0f, 0));
 	bullet.bulletSprite.setRotation(90);
+}
+
+Bullet CreateBullet(const Vector2f &position, Resourses const &res)
+{
+	Bullet bullet;
+
+	bullet.bulletImage = res.bulletImage;
+	bullet.bulletSprite.setTexture(res.bulletImage);
+	bullet.bulletSprite.setPosition(position);
+	bullet.bulletSprite.setRotation(90);
+
+	return bullet;
 }
 
 void CheckHeroMove(Hero &hero)
@@ -238,18 +266,6 @@ void UpdateObjectsTime(list<Enemy> &enemies, const float &time)
 void UpdateObjectsTime(Spawner &spawner, const float &time)
 {
 	spawner.spawnTime += time;
-}
-
-bool SetScoreFont(Spawner &spawner)
-{
-	if (!spawner.scoreFont.loadFromFile("Resourses/albionic.ttf"))
-	{
-		return false;
-	}
-	spawner.score.setFont(spawner.scoreFont);
-	spawner.score.setCharacterSize(CHARACTER_SIZE);
-
-	return true;
 }
 
 void InitHeroDmgArea(Hero &hero)
@@ -285,21 +301,90 @@ void CheckEnemyMove(list<Enemy> &enemies, Spawner &spawner)
 	}
 }
 
+void PrintEndGameText(RenderWindow &window, const int &score)
+{
+	Font font;
+	if (!font.loadFromFile("Resourses/albionic.ttf"))
+	{
+		return;
+	}
+
+	Text endGameText;
+	endGameText.setFont(font);
+	endGameText.setCharacterSize(END_LEVEL_CHARACTER_SIZE);
+	endGameText.setString("Your score: " + to_string(score) + "\nPress R to restart");
+	endGameText.setPosition(SCREEN_WIDTH/4, SCREEN_HEIGHT / 4);
+
+	window.draw(endGameText);
+	
+}
+
+Enemy CreateEnemy(Resourses const &res)
+{
+	float randomXPorition = (float)(128 + rand() % (SCREEN_WIDTH - 128));
+
+	Enemy enemy;
+
+	enemy.enemySprite.setTexture(res.shipImage);
+	enemy.enemySprite.setPosition(randomXPorition, -100);
+	enemy.enemySprite.setRotation(180);
+
+	return enemy;
+}
+
+void SpawnEnemies(list<Enemy> &enemies, Spawner &spawner, Resourses const &res)
+{
+	if (spawner.spawnTime >= 1000)
+	{
+		spawner.spawnTime = 0;
+
+		auto enemy = CreateEnemy(res);
+		enemies.push_back(enemy);
+	}
+}
+
+void GameRestart(list<Enemy> &enemies, list<Bullet> &bullets, list<Bullet> &enemyBullets,
+				Hero &hero, Spawner &spawner)
+{
+	spawner.scoreCount = 0;
+	hero.hitPoints = HERO_HP;
+	hero.heroSprite.setPosition((float)SCREEN_WIDTH / 2.0f - (float)hero.heroImage.getSize().y,
+		(float)SCREEN_HEIGHT - 2.0f * (float)hero.heroImage.getSize().y);
+	DeleteObjects(enemies);
+	DeleteObjects(bullets);
+	DeleteObjects(enemyBullets);
+}
+
+void ShipsCollision(Hero &hero, list<Enemy> enemies)
+{
+	for (auto enemy = enemies.begin(); enemy != enemies.end(); enemy++)
+	{
+		bool collision = hero.heroSprite.getGlobalBounds().intersects(enemy->enemySprite.getGlobalBounds());
+		if (collision)
+		{
+			enemies.erase(enemy);
+			hero.hitPoints = 0;
+
+			break;
+		}
+	}
+}
+
 int main() 
 {
 	RenderWindow window(VideoMode(SCREEN_WIDTH,SCREEN_HEIGHT), "Mini game");
 	
-	Spawner spawner;
-	if (!SetScoreFont(spawner))
+	Resourses res;
+	if (!LoadResourses(res))
 	{
 		return 1;
 	}
+
+	Spawner spawner;
+	spawner.score.setFont(res.textFont);
 	
 	Background background;
-	if (!BackgroundInitialization(background))
-	{
-		return 1;
-	}
+	BackgroundInitialization(background, res);
 
 	list<Bullet> bullets;
 	list<Bullet> enemyBullets;
@@ -307,19 +392,10 @@ int main()
 	list<Enemy> enemies;
 
 	Hero hero;
-	if (!InitHero(hero))
-	{
-		return 1;
-	}
+	InitHero(hero, res);
 	InitHeroDmgArea(hero);
 
 	Clock clock;
-
-	Texture bulletTexture;
-	bulletTexture.loadFromFile("Resourses/laser_bullet.png", IntRect(25, 30, 50, 3));
-
-	Texture enemyTexture;
-	enemyTexture.loadFromFile("Resourses/hero.jpg", IntRect(13, 14, 36, 38));
 
 	while (window.isOpen())
 	{
@@ -350,101 +426,93 @@ int main()
 				hero.heroSprite.move(hero.speed * time, 0);
 			}
 
-			if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z && hero.hitPoints > 0)
+			if (event.type == Event::KeyPressed && event.key.code == Keyboard::Right)
 			{
-				// Создание снаряда
-				// Текстура-недолгожитель
-				Bullet bullet;
-
-				bullet.bulletSprite.setTexture(bulletTexture);
-				bullet.bulletSprite.setPosition(hero.heroSprite.getPosition() 
-					+ Vector2f((float)hero.heroImage.getSize().x/2, 0));
-				bullet.bulletSprite.setRotation(90);
-
-				bullets.push_back(bullet);
-
-				hero.playerShotSound.play();
+				hero.heroSprite.move(hero.speed * time, 0);
 			}
 
-			if (event.type == Event::KeyPressed &&  event.key.code == Keyboard::R && hero.hitPoints <= 0)
+			if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z && hero.hitPoints > 0)
 			{
-				spawner.scoreCount = 0;
-				hero.hitPoints = HERO_HP;
-				DeleteObjects(enemies);
-				DeleteObjects(bullets);
-				DeleteObjects(enemyBullets);
+				Vector2f bulletPosition = (hero.heroSprite.getPosition()
+					+ Vector2f((float)res.shipImage.getSize().x/2, 0));
+
+				Bullet bullet = CreateBullet(bulletPosition, res);
+				bullets.push_back(bullet);
+
+				res.shotSound.play();
+			}
+
+			if (event.type == Event::KeyPressed &&  event.key.code == Keyboard::R)
+			{
+				GameRestart(enemies, bullets, enemyBullets, hero, spawner);
 			}
 		}
 
 		window.clear();
 
-		CheckHeroMove(hero);
-
-		if (spawner.spawnTime >= 1000)
+		if (hero.hitPoints > 0)
 		{
-			spawner.spawnTime = 0;
-			float random = (float)(128 + rand() % (SCREEN_WIDTH - 128));
-			// Текстура-недолгожитель
-			Enemy enemy;
-			enemy.enemyImage.loadFromFile("Resourses/hero.jpg");
-			enemy.enemySprite.setTexture(enemyTexture);
-			enemy.enemySprite.setPosition(random, -100);
-			enemy.enemySprite.setRotation(180);
-			enemies.push_back(enemy);
-		}
+			CheckHeroMove(hero);
+			SpawnEnemies(enemies, spawner, res);
 
-		//Изменение данных
-		UpdateObjectsTime(spawner, time);
-		UpdateObjectsTime(enemies, time);
+			//Изменение данных
+			UpdateObjectsTime(spawner, time);
+			UpdateObjectsTime(enemies, time);
 
-		MoveBackground(background, time);
-		CheckBackgroundMove(background);
+			MoveBackground(background, time);
+			CheckBackgroundMove(background);
 
-		MoveHeroDmgArea(hero);
-		auto &collider = hero.damageArea;
+			MoveHeroDmgArea(hero);
+			auto &collider = hero.damageArea;
 
-		for (auto enemy = enemies.begin(); enemy != enemies.end(); enemy++)
-		{
-			if (enemy->enemySprite.getGlobalBounds().intersects(collider.getGlobalBounds()) && enemy->localTime >= 1000)
+			for (auto enemy = enemies.begin(); enemy != enemies.end(); enemy++)
 			{
-				enemy->localTime = 0;
-				Bullet bullet;
-				// Текстура - недолгожитель
-				bullet.bulletSprite.setTexture(bulletTexture);
-				bullet.bulletSprite.setPosition(enemy->enemySprite.getPosition()
-					- Vector2f((float)enemy->enemyImage.getSize().x/4 , (float)enemy->enemyImage.getSize().y/2));
-				bullet.bulletSprite.setRotation(90);
+				if (enemy->enemySprite.getGlobalBounds().intersects(collider.getGlobalBounds()) && enemy->localTime >= 1000)
+				{
+					enemy->localTime = 0;
 
-				enemyBullets.push_back(bullet);
-				hero.playerShotSound.play();
+					Vector2f bulletPosition = (enemy->enemySprite.getPosition()
+						- Vector2f((float)res.shipImage.getSize().x / 4, (float)res.shipImage.getSize().y / 2));
+
+					Bullet bullet = CreateBullet(bulletPosition, res);
+					enemyBullets.push_back(bullet);
+
+					res.shotSound.play();
+				}
 			}
+
+
+			MoveBullets(enemyBullets, -time);
+			MoveBullets(bullets, time);
+			MoveEnemies(enemies, time);
+
+			ShipsCollision(hero, enemies);
+
+			hero.hpText.setString("HP: " + to_string(hero.hitPoints));
+			spawner.score.setString(to_string(spawner.scoreCount));
+
+			CheckCollision(bullets, enemies, spawner.scoreCount);
+			CheckCollision(enemyBullets, hero);
+			CheckCollision(bullets, enemyBullets);
+
+			CheckEnemyMove(enemies, spawner);
+
+			//Рендер
+			window.draw(background.backgroundBot);
+			window.draw(background.backgroundTop);
+			window.draw(hero.heroSprite);
+
+			DrawBullets(window, enemyBullets);
+			DrawBullets(window, bullets);
+			DrawEnemies(window, enemies);
+
+			window.draw(spawner.score);
+			window.draw(hero.hpText);
 		}
-		
-		MoveBullets(enemyBullets, -time);
-		MoveBullets(bullets, time);
-		MoveEnemies(enemies, time);
-		
-		hero.hpText.setString("HP: " + to_string(hero.hitPoints));
-		spawner.score.setString(to_string(spawner.scoreCount));
-
-		CheckCollision(bullets, enemies, spawner.scoreCount);
-		CheckCollision(enemyBullets, hero);
-		CheckCollision(bullets, enemyBullets);
-
-		CheckEnemyMove(enemies, spawner);
-
-		//Рендер
-		window.draw(background.backgroundBot);
-		window.draw(background.backgroundTop);
-		window.draw(hero.heroSprite);
-
-		DrawBullets(window, enemyBullets);
-		DrawBullets(window, bullets);
-		DrawEnemies(window, enemies);
-
-		window.draw(spawner.score);
-		window.draw(hero.hpText);
-
+		else
+		{
+			PrintEndGameText(window, spawner.scoreCount);
+		}
 		window.display();
 	}
 }
