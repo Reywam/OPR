@@ -14,6 +14,8 @@ const int HP_TEXT_SHIFT = 120;
 
 const int HERO_HP = 5;
 
+const int SPAWN_TIME = 1000;
+
 using namespace sf;
 using namespace std;
 
@@ -53,6 +55,8 @@ struct Bullet
 {
 	Texture bulletImage;
 	Sprite bulletSprite;
+
+	float speed = 0.5f;
 };
 
 struct Spawner
@@ -73,23 +77,47 @@ struct Resourses
 	Music shotSound;
 };
 
-bool LoadResourses(Resourses &res)
+struct GameEntities
 {
-	if (
-		!res.textFont.loadFromFile("Resourses/albionic.ttf")
-		|| !res.backgroundImage.loadFromFile("Resourses/background.png")
-		|| !res.shipImage.loadFromFile("Resourses/hero.jpg", IntRect(13, 14, 36, 38))
-		|| !res.shotSound.openFromFile("Resourses/player_shot_sound.wav")
-		|| !res.bulletImage.loadFromFile("Resourses/laser_bullet.png", IntRect(25, 30, 50, 3))
-		)
-	{
-		return false;
-	}
+	//Указатели на игровые сущности
+	Hero *hero;
 
-	return true;
+	list<Enemy> *enemies;
+
+	list<Bullet> *enemyBullets;
+	list<Bullet> *bullets;
+
+	Spawner *spawner;
+	Background *background;
+
+	RenderWindow *window;
+};
+
+void InitGameEntities(GameEntities &entities, RenderWindow *window, Hero *hero, list<Enemy> *enemies
+						,list <Bullet> *bullets, list<Bullet> *enemyBullets, Spawner *spawner
+						, Background *background)
+{
+	entities.hero = hero;
+	entities.window = window;
+	entities.enemies = enemies;
+	entities.bullets = bullets;
+	entities.enemyBullets = enemyBullets;
+	entities.spawner = spawner;
+	entities.background = background;
 }
 
-bool BackgroundInitialization(Background &background, Resourses const &res)
+bool LoadResourses(Resourses &res)
+{
+	return (
+		res.textFont.loadFromFile("Resourses/albionic.ttf")
+		&& res.backgroundImage.loadFromFile("Resourses/background.png")
+		&& res.shipImage.loadFromFile("Resourses/hero.jpg", IntRect(13, 14, 36, 38))
+		&& res.shotSound.openFromFile("Resourses/player_shot_sound.wav")
+		&& res.bulletImage.loadFromFile("Resourses/laser_bullet.png", IntRect(25, 30, 50, 3))
+		);
+}
+
+void BackgroundInitialization(Background &background, Resourses const &res)
 {
 	background.backgroundBot.setTexture(res.backgroundImage);
 	background.backgroundTop.setTexture(res.backgroundImage);
@@ -97,7 +125,6 @@ bool BackgroundInitialization(Background &background, Resourses const &res)
 	background.backgroundTop.setPosition(0, -SCREEN_HEIGHT);
 	background.backgroundBot.setScale(2, 1);
 	background.backgroundTop.setScale(2, 1);
-	return true;
 }
 
 void DrawBullets(RenderWindow &window, const list<Bullet> &bullets)
@@ -128,7 +155,7 @@ void MoveBullets(list<Bullet> &bullets, const float &time)
 {
 	for (auto bullet = bullets.begin(); bullet != bullets.end(); bullet++)
 	{
-		bullet->bulletSprite.move(0, (float)(-0.5*time));
+		bullet->bulletSprite.move(0, (float)(-bullet->speed * time));
 	}
 }
 
@@ -278,14 +305,10 @@ void MoveHeroDmgArea(Hero &hero)
 	hero.damageArea.setPosition(hero.heroSprite.getPosition().x, hero.damageArea.getPosition().y);
 }
 
-void DeleteObjects(list<Enemy> &enemies)
+template <typename T>
+void DeleteObjects(list<T> &objects)
 {
-	enemies.clear();
-}
-
-void DeleteObjects(list<Bullet> &bullets)
-{
-	bullets.clear();
+	objects.clear();
 }
 
 void CheckEnemyMove(list<Enemy> &enemies, Spawner &spawner)
@@ -301,21 +324,17 @@ void CheckEnemyMove(list<Enemy> &enemies, Spawner &spawner)
 	}
 }
 
-void PrintEndGameText(RenderWindow &window, const int &score)
+void PrintEndGameText(GameEntities *entities, Resourses const &res)
 {
-	Font font;
-	if (!font.loadFromFile("Resourses/albionic.ttf"))
-	{
-		return;
-	}
+	entities->window->clear();
 
 	Text endGameText;
-	endGameText.setFont(font);
+	endGameText.setFont(res.textFont);
 	endGameText.setCharacterSize(END_LEVEL_CHARACTER_SIZE);
-	endGameText.setString("Your score: " + to_string(score) + "\nPress R to restart");
+	endGameText.setString("Your score: " + to_string(entities->spawner->scoreCount) + "\nPress R to restart");
 	endGameText.setPosition(SCREEN_WIDTH/4, SCREEN_HEIGHT / 4);
 
-	window.draw(endGameText);
+	entities->window->draw(endGameText);
 	
 }
 
@@ -334,7 +353,7 @@ Enemy CreateEnemy(Resourses const &res)
 
 void SpawnEnemies(list<Enemy> &enemies, Spawner &spawner, Resourses const &res)
 {
-	if (spawner.spawnTime >= 1000)
+	if (spawner.spawnTime >= SPAWN_TIME)
 	{
 		spawner.spawnTime = 0;
 
@@ -343,16 +362,19 @@ void SpawnEnemies(list<Enemy> &enemies, Spawner &spawner, Resourses const &res)
 	}
 }
 
-void GameRestart(list<Enemy> &enemies, list<Bullet> &bullets, list<Bullet> &enemyBullets,
-				Hero &hero, Spawner &spawner)
+void GameRestart(GameEntities *entities)
 {
-	spawner.scoreCount = 0;
-	hero.hitPoints = HERO_HP;
-	hero.heroSprite.setPosition((float)SCREEN_WIDTH / 2.0f - (float)hero.heroImage.getSize().y,
-		(float)SCREEN_HEIGHT - 2.0f * (float)hero.heroImage.getSize().y);
-	DeleteObjects(enemies);
-	DeleteObjects(bullets);
-	DeleteObjects(enemyBullets);
+	Vector2f defaultHeroPosition = Vector2f((float)SCREEN_WIDTH / 2.0f - (float)entities->hero->heroImage.getSize().y,
+		(float)SCREEN_HEIGHT - 2.0f * (float)entities->hero->heroImage.getSize().y);
+
+	entities->spawner->scoreCount = 0;
+
+	entities->hero->hitPoints = HERO_HP;
+	entities->hero->heroSprite.setPosition(defaultHeroPosition);
+
+	DeleteObjects(*entities->enemies);
+	DeleteObjects(*entities->bullets);
+	DeleteObjects(*entities->enemyBullets);
 }
 
 void ShipsCollision(Hero &hero, list<Enemy> enemies)
@@ -368,6 +390,115 @@ void ShipsCollision(Hero &hero, list<Enemy> enemies)
 			break;
 		}
 	}
+}
+
+void HandleEvents(GameEntities *entities, Resourses &res, float const &time)
+{
+	float heroSpeed = entities->hero->speed;
+	Vector2f heroPosition = entities->hero->heroSprite.getPosition();
+
+	Event event;
+	while (entities->window->pollEvent(event))
+	{
+		if (event.type == Event::KeyPressed && event.key.code == Keyboard::Left)
+		{
+			entities->hero->heroSprite.setPosition(heroPosition.x - (heroSpeed * time), heroPosition.y);
+		}
+
+		if (event.type == Event::KeyPressed && event.key.code == Keyboard::Right)
+		{
+			entities->hero->heroSprite.setPosition(heroPosition.x + (heroSpeed * time), heroPosition.y);
+		}
+
+		if (event.type == Event::Closed || (event.type == Event::KeyPressed && event.key.code == Keyboard::Escape))
+		{
+			entities->window->close();
+		}
+
+		if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z && entities->hero->hitPoints > 0)
+		{
+			Vector2f bulletPosition = (entities->hero->heroSprite.getPosition()
+				+ Vector2f((float)entities->hero->heroImage.getSize().x / 2, 0));
+
+			Bullet bullet = CreateBullet(bulletPosition, res);
+			entities->bullets->push_back(bullet);
+
+			res.shotSound.play();
+		}
+
+		if (event.type == Event::KeyPressed &&  event.key.code == Keyboard::R)
+		{
+			GameRestart(entities);
+		}
+	}
+}
+
+void EnemyAttack(GameEntities *entities, Resourses &res)
+{
+	auto &collider = entities->hero->damageArea;
+
+	for (auto enemy = entities->enemies->begin(); enemy != entities->enemies->end(); enemy++)
+	{
+		if (enemy->enemySprite.getGlobalBounds().intersects(collider.getGlobalBounds()) && enemy->localTime >= 1000)
+		{
+			enemy->localTime = 0;
+
+			Vector2f bulletPosition = (enemy->enemySprite.getPosition()
+				- Vector2f((float)res.shipImage.getSize().x / 4 + 5, (float)res.shipImage.getSize().y / 2));
+
+			Bullet bullet = CreateBullet(bulletPosition, res);
+			entities->enemyBullets->push_back(bullet);
+
+			res.shotSound.play();
+		}
+	}
+}
+
+void Update(GameEntities *entities, Resourses &res, float time)
+{
+	entities->window->clear();
+
+	CheckHeroMove(*entities->hero);
+	SpawnEnemies(*entities->enemies, *entities->spawner, res);
+
+	EnemyAttack(entities, res);
+
+	MoveHeroDmgArea(*entities->hero);
+
+	UpdateObjectsTime(*entities->spawner, time);
+	UpdateObjectsTime(*entities->enemies, time);
+
+	MoveBackground(*entities->background, time);
+	CheckBackgroundMove(*entities->background);
+
+	MoveBullets(*entities->enemyBullets, -time);
+	MoveBullets(*entities->bullets, time);
+	MoveEnemies(*entities->enemies, time);
+
+	ShipsCollision(*entities->hero, *entities->enemies);
+
+	entities->hero->hpText.setString("HP: " + to_string(entities->hero->hitPoints));
+	entities->spawner->score.setString(to_string(entities->spawner->scoreCount));
+
+	CheckCollision(*entities->bullets, *entities->enemies, entities->spawner->scoreCount);
+	CheckCollision(*entities->enemyBullets, *entities->hero);
+	CheckCollision(*entities->bullets, *entities->enemyBullets);
+
+	CheckEnemyMove(*entities->enemies, *entities->spawner);
+}
+
+void Render(GameEntities *entities)
+{
+	entities->window->draw(entities->background->backgroundBot);
+	entities->window->draw(entities->background->backgroundTop);
+	entities->window->draw(entities->hero->heroSprite);
+
+	DrawBullets(*entities->window, *entities->enemyBullets);
+	DrawBullets(*entities->window, *entities->bullets);
+	DrawEnemies(*entities->window, *entities->enemies);
+
+	entities->window->draw(entities->spawner->score);
+	entities->window->draw(entities->hero->hpText);
 }
 
 int main() 
@@ -397,121 +528,26 @@ int main()
 
 	Clock clock;
 
+	GameEntities entities;
+	InitGameEntities(entities, &window, &hero, &enemies, &bullets, &enemyBullets, &spawner, &background);
+
 	while (window.isOpen())
 	{
 		float time = static_cast<float>(clock.getElapsedTime().asMicroseconds());
 		clock.restart();
 		time /= 1000;
 
-		Event event;
-		while (window.pollEvent(event))
+		HandleEvents(&entities, res, time);
+		bool heroIsAlive = hero.hitPoints > 0;
+
+		if (heroIsAlive)
 		{
-			if (event.type == Event::Closed)
-			{
-				window.close();
-			}
-
-			if (event.type == Event::KeyPressed && event.key.code == Keyboard::Escape)
-			{
-				return 0;
-			}
-
-			if (event.type == Event::KeyPressed && event.key.code == Keyboard::Left)
-			{
-				hero.heroSprite.move(-hero.speed * time, 0);
-			}
-
-			if (event.type == Event::KeyPressed && event.key.code == Keyboard::Right)
-			{
-				hero.heroSprite.move(hero.speed * time, 0);
-			}
-
-			if (event.type == Event::KeyPressed && event.key.code == Keyboard::Right)
-			{
-				hero.heroSprite.move(hero.speed * time, 0);
-			}
-
-			if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z && hero.hitPoints > 0)
-			{
-				Vector2f bulletPosition = (hero.heroSprite.getPosition()
-					+ Vector2f((float)res.shipImage.getSize().x/2, 0));
-
-				Bullet bullet = CreateBullet(bulletPosition, res);
-				bullets.push_back(bullet);
-
-				res.shotSound.play();
-			}
-
-			if (event.type == Event::KeyPressed &&  event.key.code == Keyboard::R)
-			{
-				GameRestart(enemies, bullets, enemyBullets, hero, spawner);
-			}
-		}
-
-		window.clear();
-
-		if (hero.hitPoints > 0)
-		{
-			CheckHeroMove(hero);
-			SpawnEnemies(enemies, spawner, res);
-
-			//Изменение данных
-			UpdateObjectsTime(spawner, time);
-			UpdateObjectsTime(enemies, time);
-
-			MoveBackground(background, time);
-			CheckBackgroundMove(background);
-
-			MoveHeroDmgArea(hero);
-			auto &collider = hero.damageArea;
-
-			for (auto enemy = enemies.begin(); enemy != enemies.end(); enemy++)
-			{
-				if (enemy->enemySprite.getGlobalBounds().intersects(collider.getGlobalBounds()) && enemy->localTime >= 1000)
-				{
-					enemy->localTime = 0;
-
-					Vector2f bulletPosition = (enemy->enemySprite.getPosition()
-						- Vector2f((float)res.shipImage.getSize().x / 4, (float)res.shipImage.getSize().y / 2));
-
-					Bullet bullet = CreateBullet(bulletPosition, res);
-					enemyBullets.push_back(bullet);
-
-					res.shotSound.play();
-				}
-			}
-
-
-			MoveBullets(enemyBullets, -time);
-			MoveBullets(bullets, time);
-			MoveEnemies(enemies, time);
-
-			ShipsCollision(hero, enemies);
-
-			hero.hpText.setString("HP: " + to_string(hero.hitPoints));
-			spawner.score.setString(to_string(spawner.scoreCount));
-
-			CheckCollision(bullets, enemies, spawner.scoreCount);
-			CheckCollision(enemyBullets, hero);
-			CheckCollision(bullets, enemyBullets);
-
-			CheckEnemyMove(enemies, spawner);
-
-			//Рендер
-			window.draw(background.backgroundBot);
-			window.draw(background.backgroundTop);
-			window.draw(hero.heroSprite);
-
-			DrawBullets(window, enemyBullets);
-			DrawBullets(window, bullets);
-			DrawEnemies(window, enemies);
-
-			window.draw(spawner.score);
-			window.draw(hero.hpText);
+			Update(&entities, res, time);
+			Render(&entities);
 		}
 		else
 		{
-			PrintEndGameText(window, spawner.scoreCount);
+			PrintEndGameText(&entities, res);
 		}
 		window.display();
 	}
