@@ -1,0 +1,13 @@
+﻿1>------ Сборка начата: проект: Game, Конфигурация: Debug Win32 ------
+1>  Game.cpp
+1>d:\cppproj\game\game\game.cpp(129): warning C4244: =: преобразование "double" в "int", возможна потеря данных
+1>d:\cppproj\game\game\game.cpp(138): warning C4244: аргумент: преобразование "unsigned int" в "float", возможна потеря данных
+1>d:\cppproj\game\game\game.cpp(157): warning C4244: аргумент: преобразование "unsigned int" в "float", возможна потеря данных
+1>d:\cppproj\game\game\game.cpp(165): warning C4244: инициализация: преобразование "float" в "int", возможна потеря данных
+1>d:\cppproj\game\game\game.cpp(202): warning C4305: аргумент: усечение из "double" к "float"
+1>d:\cppproj\game\game\game.cpp(209): warning C4305: аргумент: усечение из "double" к "float"
+1>d:\cppproj\game\game\game.cpp(268): warning C4244: инициализация: преобразование "double" в "float", возможна потеря данных
+1>d:\cppproj\game\game\game.cpp(284): warning C4244: аргумент: преобразование "double" в "int", возможна потеря данных
+1>  Game.vcxproj -> D:\CppProj\Game\Debug\Game.exe
+1>  Game.vcxproj -> D:\CppProj\Game\Debug\Game.pdb (Full PDB)
+========== Сборка: успешно: 1, с ошибками: 0, без изменений: 0, пропущено: 0 ==========
