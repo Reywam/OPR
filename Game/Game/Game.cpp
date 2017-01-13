@@ -275,17 +275,17 @@ Vector2f Normalize(Vector2f vector)
 	return vector;
 }
 
-void MoveEnemy(MeeleEnemy &enemy)
+void MoveEnemy(MeeleEnemy &enemy, float time)
 {
 	if (enemy.currentFrame > 6)
 	{
 		enemy.currentFrame = 0;
 	}
 	enemy.sprite.setTextureRect(IntRect(345 + 40 * (int)enemy.currentFrame, 0, 42, 50));
-	enemy.sprite.move(5, 0);
+	enemy.sprite.move(50 * time, 0);
 }
 
-void MoveEnemy(RangeEnemy &enemy, Base const &base)
+void MoveEnemy(RangeEnemy &enemy, Base const &base, float time)
 {
 	if (enemy.currentFrame >= 3)
 	{
@@ -295,7 +295,7 @@ void MoveEnemy(RangeEnemy &enemy, Base const &base)
 	if (enemy.sprite.getPosition().x <= base.sprite.getPosition().x - 300)
 	{
 		enemy.sprite.setTextureRect(IntRect(55 * (int)enemy.currentFrame, 0, 55, 55));
-		enemy.sprite.move(5, 0);
+		enemy.sprite.move(50 * time, 0);
 	}
 	else
 	{
@@ -483,12 +483,12 @@ void EnemyAttack(Resourses const &res, RangeEnemy &enemy, Base &base, vector<Arr
 	}
 }
 
-void ProcessEnemyActivity(MeeleEnemy &enemy, Base &base, State &state)
+void ProcessEnemyActivity(MeeleEnemy &enemy, Base &base, State &state, float time)
 {
 	switch (state)
 	{
 	case movement:
-		MoveEnemy(enemy);
+		MoveEnemy(enemy, time);
 		break;
 	case attack:
 		EnemyAttack(enemy, base);
@@ -508,12 +508,12 @@ void SetStateSprite(RangeEnemy &enemy, Resourses const &res)
 	}
 }
 
-void ProcessEnemyActivity(Resourses const &res, RangeEnemy &enemy, Base &base, vector<Arrow> &arrows, State &state)
+void ProcessEnemyActivity(Resourses const &res, RangeEnemy &enemy, Base &base, vector<Arrow> &arrows, State &state, float time)
 {
 	switch (state)
 	{
 	case movement:
-		MoveEnemy(enemy, base);
+		MoveEnemy(enemy, base, time);
 		break;
 	case attack:
 		EnemyAttack(res, enemy, base, arrows);
@@ -524,21 +524,21 @@ void ProcessEnemyActivity(Resourses const &res, RangeEnemy &enemy, Base &base, v
 	}
 }
 
-void ProcessEnemiesActivities(vector<MeeleEnemy> &enemies, Base &base)
+void ProcessEnemiesActivities(vector<MeeleEnemy> &enemies, Base &base, float time)
 {
 	for (auto enemy = enemies.begin(); enemy != enemies.end(); enemy++)
 	{
 		EnemyHPBarUpdate(*enemy);
-		ProcessEnemyActivity(*enemy, base, enemy->state);
+		ProcessEnemyActivity(*enemy, base, enemy->state, time);
 	}
 }
 
-void ProcessEnemiesActivities(Resourses const &res, vector<RangeEnemy> &enemies, Base &base, vector<Arrow> &arrows)
+void ProcessEnemiesActivities(Resourses const &res, vector<RangeEnemy> &enemies, Base &base, vector<Arrow> &arrows, float time)
 {
 	for (auto enemy = enemies.begin(); enemy != enemies.end(); enemy++)
 	{
 		EnemyHPBarUpdate(*enemy);
-		ProcessEnemyActivity(res, *enemy, base, arrows, enemy->state);
+		ProcessEnemyActivity(res, *enemy, base, arrows, enemy->state, time);
 	}
 }
 
@@ -568,14 +568,14 @@ RangeEnemy CreateRangeEnemy(Resourses const &res)
 	return enemy;
 }
 
-void MoveArrows(vector<Arrow> &arrows)
+void MoveArrows(vector<Arrow> &arrows, float time)
 {
 	for (auto arrow = arrows.begin(); arrow != arrows.end(); ++arrow)
 	{
 		Vector2f direction = Vector2f(arrow->movementVector.x * arrow->arrowSpeed,
 			arrow->movementVector.y * arrow->arrowSpeed);
 
-		arrow->sprite.move(direction.x, direction.y);
+		arrow->sprite.move(10 * direction.x * time, 10 * direction.y * time);
 	}
 }
 
@@ -633,7 +633,7 @@ Fireball CreateFireball(Resourses const &res, const Vector2f &position)
 	return fireball;
 }
 
-void MoveFireball(Fireball &fireball)
+void MoveFireball(Fireball &fireball, float time)
 {
 	if (fireball.currentFrame > 6)
 	{
@@ -652,14 +652,14 @@ void MoveFireball(Fireball &fireball)
 	Vector2f movementVector = Vector2f(fireball.direction.x * fireball.movementSpeed,
 		fireball.direction.y * fireball.movementSpeed);
 
-	fireball.sprite.move(movementVector.x, movementVector.y);
+	fireball.sprite.move(30 * movementVector.x * time, 30 * movementVector.y * time);
 }
 
-void MoveFireballs(vector<Fireball> &fireballs)
+void MoveFireballs(vector<Fireball> &fireballs, float time)
 {
 	for (auto &fireball : fireballs)
 	{
-		MoveFireball(fireball);
+		MoveFireball(fireball, time);
 	}
 }
 
@@ -1071,7 +1071,7 @@ void Update(RenderWindow &window, GameEntities &entities, Resourses &res, float 
 	entities.heroArrow.sprite.setRotation(rotation);
 	//heroArrow.sprite.setTexture(res.magicArrowImage);
 
-	MoveArrows(entities.heroArrows);
+	MoveArrows(entities.heroArrows, time);
 	MoveEnemyArrows(entities.enemyArrows);
 
 	if (entities.hero.readyToFireballCast)
@@ -1080,7 +1080,7 @@ void Update(RenderWindow &window, GameEntities &entities, Resourses &res, float 
 		entities.hero.readyToFireballCast = false;
 	}
 
-	MoveFireballs(entities.fireballs);
+	MoveFireballs(entities.fireballs, time);
 	CircleShape damageArea = CheckFireballsPosition(entities.fireballs);
 
 	bool weAreReadyForBOOM = damageArea.getRadius() != 0;
@@ -1115,8 +1115,8 @@ void Update(RenderWindow &window, GameEntities &entities, Resourses &res, float 
 
 	SpellCooldown(entities.hero, time);
 
-	ProcessEnemiesActivities(entities.enemies.mEnemies, entities.base);
-	ProcessEnemiesActivities(res, entities.enemies.rEnemies, entities.base, entities.enemyArrows);
+	ProcessEnemiesActivities(entities.enemies.mEnemies, entities.base, time);
+	ProcessEnemiesActivities(res, entities.enemies.rEnemies, entities.base, entities.enemyArrows, time);
 
 	SpawnEnemies(entities, res);
 
