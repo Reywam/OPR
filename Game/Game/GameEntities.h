@@ -70,6 +70,12 @@ enum State
 	dead,
 };
 
+struct GameMenu
+{
+	sf::Text newGameText;
+	sf::Text exitText;
+};
+
 struct HPBar
 {
 	sf::Sprite sprite;
@@ -118,6 +124,9 @@ struct MeeleEnemy
 
 	float time = 0;
 	float currentFrame = 0;
+	float timeToChooseMovement = 0;
+
+	int direction = 0;
 
 	int hp = 0;
 	int damage = 0;
@@ -194,6 +203,10 @@ struct SkillBar
 	sf::Sprite spell1;
 	sf::Sprite spell2;
 	sf::Sprite spell3;
+
+	sf::Vector2f defaultSpell1Position;
+	sf::Vector2f defaultSpell2Position;
+	sf::Vector2f defaultSpell3Position;
 
 	sf::Text useButton1;
 	sf::Text useButton2;
@@ -274,6 +287,8 @@ struct Boss
 
 struct GameEntities
 {
+	GameMenu menu;
+
 	Hero hero;
 	Arrow heroArrow;
 	Base base;

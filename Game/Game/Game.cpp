@@ -6,6 +6,7 @@
 
 #include "Render.h"
 
+
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 500;
 
@@ -22,22 +23,22 @@ using namespace std;
 bool InitResourses(Resourses &res)
 {
 	return(
-		res.backgroundImage.loadFromFile("Res/tbg3.png")
-		&& res.meeleEnemyImage.loadFromFile("Res/ens.png")
-		&& res.rangeEnemyImage.loadFromFile("Res/TestRes/enemyArcher.png")
-		&& res.baseImage.loadFromFile("Res/ens.png", IntRect(250, 0, 50, 300))
-		&& res.arrowImage.loadFromFile("Res/arrow.png", IntRect(0, 1, 30, 4))
-		&& res.heroImage.loadFromFile("Res/ens.png", IntRect(200, 170, 30, 40))
-		&& res.hpBarImage.loadFromFile("Res/TestRes/hpbar.png")
-		&& res.hpPotionImage.loadFromFile("Res/TestRes/pt1.png")
-		&& res.explPotionImage.loadFromFile("Res/TestRes/bomb.png")
-		&& res.explosionImage.loadFromFile("Res/TestRes/explosion.png")
-		&& res.skillBarImage.loadFromFile("Res/TestRes/i_background.png", IntRect(323, 800, 315, 80))
-		&& res.spellSlotImage.loadFromFile("Res/TestRes/skill.png")
+		res.backgroundImage.loadFromFile("Res/sprites/tbg3.png")
+		&& res.meeleEnemyImage.loadFromFile("Res/sprites/ens.png")
+		&& res.rangeEnemyImage.loadFromFile("Res/sprites/enemyArcher.png")
+		&& res.baseImage.loadFromFile("Res/sprites/ens.png", IntRect(250, 0, 50, 300))
+		&& res.arrowImage.loadFromFile("Res/sprites/arrow.png", IntRect(0, 1, 30, 4))
+		&& res.heroImage.loadFromFile("Res/sprites/ens.png", IntRect(200, 170, 30, 40))
+		&& res.hpBarImage.loadFromFile("Res/sprites/hpbar.png")
+		&& res.hpPotionImage.loadFromFile("Res/sprites/pt1.png")
+		&& res.explPotionImage.loadFromFile("Res/sprites/bomb.png")
+		&& res.explosionImage.loadFromFile("Res/sprites/explosion.png")
+		&& res.skillBarImage.loadFromFile("Res/sprites/i_background.png", IntRect(323, 800, 315, 80))
+		&& res.spellSlotImage.loadFromFile("Res/sprites/skill.png")
 		&& res.fireballImage.loadFromFile("Res/icons/fireball.png")
 		&& res.healImage.loadFromFile("Res/icons/heal.png")
 		&& res.enchantedWeaponImage.loadFromFile("Res/icons/enchantedWeapon.png")
-		&& res.spellFireballImage.loadFromFile("Res/TestRes/fireballSpell.png")
+		&& res.spellFireballImage.loadFromFile("Res/sprites/fireballSpell.png")
 		&& res.fireballSound.openFromFile("Res/Sounds/fireball.wav")
 		&& res.fireballCastSound.openFromFile("Res/Sounds/fireballCast.wav")
 		&& res.healSound.openFromFile("Res/Sounds/heal.wav")
@@ -46,11 +47,9 @@ bool InitResourses(Resourses &res)
 		&& res.enemyDieSound.openFromFile("Res/Sounds/enemyDieSound.wav")
 		&& res.mainThemeSound.openFromFile("Res/Sounds/Fehu.wav")
 		&& res.humanEnemyDieSound.openFromFile("Res/Sounds/humanDieSound.wav")
-		&& res.cursorImage.loadFromFile("Res/cursor3.png")
-		&& res.magicArrowImage.loadFromFile("Res/magicArrow2.png")
+		&& res.cursorImage.loadFromFile("Res/sprites/cursor.png")
 		&& res.bossImage.loadFromFile("Res/boss/boss.png")
 		&& res.font.loadFromFile("Res/fonts/albionic.ttf")
-		&& res.loseGameImage.loadFromFile("Res/TestRes/youlose.jpg")
 	);
 }
 
@@ -113,6 +112,14 @@ void SkillBarInit(SkillBar &skillBar, Resourses const &res)
 	skillBar.spell1Cooldown.setPosition(skillBar.slot1.getPosition() + Vector2f(20, 10));
 	skillBar.spell2Cooldown.setPosition(skillBar.slot2.getPosition() + Vector2f(13, 10));
 	skillBar.spell3Cooldown.setPosition(skillBar.slot3.getPosition() + Vector2f(13, 10));
+
+	skillBar.spell1Cooldown.setFillColor(Color::Yellow);
+	skillBar.spell2Cooldown.setFillColor(Color::Yellow);
+	skillBar.spell3Cooldown.setFillColor(Color::Yellow);
+
+	skillBar.defaultSpell1Position = skillBar.spell1Cooldown.getPosition();
+	skillBar.defaultSpell2Position = skillBar.spell2Cooldown.getPosition();
+	skillBar.defaultSpell3Position = skillBar.spell3Cooldown.getPosition();
 }
 
 void SpellsInit(SkillBar &skillBar, Resourses const &res)
@@ -137,7 +144,25 @@ void UpdateSkillbarCooldown(SkillBar &skillbar, Hero const &hero)
 {
 	skillbar.spell1Cooldown.setString(to_string((int)hero.fireballCooldown));
 	skillbar.spell2Cooldown.setString(to_string((int)hero.healCooldown));
+	if ((int)hero.healCooldown < 10)
+	{
+		skillbar.spell2Cooldown.setPosition(skillbar.defaultSpell2Position + Vector2f(7, 0));
+	}
+	else
+	{
+		skillbar.spell2Cooldown.setPosition(skillbar.defaultSpell2Position);
+	}
+
 	skillbar.spell3Cooldown.setString(to_string((int)hero.enchantedArrowCooldown));
+	if ((int)hero.enchantedArrowCooldown < 10)
+	{
+		skillbar.spell3Cooldown.setPosition(skillbar.defaultSpell3Position + Vector2f(7, 0));
+	}
+	else
+	{
+		skillbar.spell3Cooldown.setPosition(skillbar.defaultSpell3Position);
+	}
+
 }
 
 void HPBarInit(HPBar &hpBar, Resourses const &res)
@@ -187,7 +212,7 @@ MeeleEnemy CreateMeeleEnemy(Resourses const &res)
 	enemy.sprite.setTextureRect(IntRect(345, 0, 42, 50));
 
 	enemy.hp = 100;
-	enemy.damage = 20;
+	enemy.damage = 15;
 	enemy.attackSpeed = 2;
 
 	return enemy;
@@ -282,7 +307,23 @@ void MoveEnemy(MeeleEnemy &enemy, float time)
 		enemy.currentFrame = 0;
 	}
 	enemy.sprite.setTextureRect(IntRect(345 + 40 * (int)enemy.currentFrame, 0, 42, 50));
-	enemy.sprite.move(50 * time, 0);
+
+	if (enemy.timeToChooseMovement >= 1.5)
+	{
+		enemy.timeToChooseMovement = 0;
+		//movement == 1 ? 0 : 1;
+		if (enemy.direction == 0)
+		{
+			enemy.direction = 1;
+		}
+		else
+		{
+			enemy.direction = 0;
+		}
+	}
+	
+	enemy.direction == 0 ? (enemy.sprite.move(50 * time, 40 * time)) 
+		: enemy.sprite.move(50 * time, -40 * time);
 }
 
 void MoveEnemy(RangeEnemy &enemy, Base const &base, float time)
@@ -309,6 +350,10 @@ void Update(vector<MeeleEnemy> &enemies, float time)
 	{
 		enemy->time += time;
 		enemy->currentFrame += 5*time;
+		if (enemy->timeToChooseMovement < 5)
+		{
+			enemy->timeToChooseMovement += time;
+		}
 	}
 }
 
@@ -562,6 +607,7 @@ RangeEnemy CreateRangeEnemy(Resourses const &res)
 	enemy.sprite.setScale(1.5, 1.5);
 	enemy.sprite.setPosition(100, 300);
 	enemy.hp = 40;
+	enemy.damage = 10;
 
 	enemy.state = movement;
 
@@ -575,7 +621,7 @@ void MoveArrows(vector<Arrow> &arrows, float time)
 		Vector2f direction = Vector2f(arrow->movementVector.x * arrow->arrowSpeed,
 			arrow->movementVector.y * arrow->arrowSpeed);
 
-		arrow->sprite.move(10 * direction.x * time, 10 * direction.y * time);
+		arrow->sprite.move(20 * direction.x * time, 20 * direction.y * time);
 	}
 }
 
@@ -598,11 +644,11 @@ void CheckBaseHP(Base &base)
 	base.hp = Clamp(base.hp, 0, BASE_HP);
 }
 
-void MoveEnemyArrows(vector<Arrow> &arrows)
+void MoveEnemyArrows(vector<Arrow> &arrows, float time)
 {
 	for (auto &arrow : arrows)
 	{
-		arrow.sprite.move(10, 0);
+		arrow.sprite.move(200 * time, 0);
 	}
 }
 
@@ -679,11 +725,6 @@ void SpellCooldown(Hero &hero, float time)
 	}
 
 	if (hero.healCooldown > 0)
-	{
-		hero.healCooldown -= time;
-	}
-
-	if (hero.enchantedArrowCooldown)
 	{
 		hero.healCooldown -= time;
 	}
@@ -1055,7 +1096,6 @@ void CheckMinionsHP(vector<BossMinion> &minions)
 	}
 }
 
-
 void Update(RenderWindow &window, GameEntities &entities, Resourses &res, float time)
 {
 	entities.hero.damageTime += time;
@@ -1072,7 +1112,7 @@ void Update(RenderWindow &window, GameEntities &entities, Resourses &res, float 
 	//heroArrow.sprite.setTexture(res.magicArrowImage);
 
 	MoveArrows(entities.heroArrows, time);
-	MoveEnemyArrows(entities.enemyArrows);
+	MoveEnemyArrows(entities.enemyArrows, time);
 
 	if (entities.hero.readyToFireballCast)
 	{
@@ -1172,6 +1212,60 @@ void BossUpdate(GameEntities &entities, Resourses const &res, float time)
 	CheckMinionsHP(entities.boss.minions);
 }
 
+void Game(RenderWindow &window, GameEntities &entities, Resourses &res, float time)
+{
+	if (entities.boss.currHP != 0 && entities.base.hp != 0)
+	{
+		Update(window, entities, res, time);
+
+		if (entities.spawner.deadEnemiesCount >= END_OF_WAVE)
+		{
+			BossUpdate(entities, res, time);
+		}
+		Render(window, entities);
+	}
+
+	if (entities.boss.currHP <= 0)
+	{
+		window.clear();
+
+		window.draw(res.youWinText);
+
+		window.display();
+	}
+
+	if (entities.base.hp <= 0)
+	{
+		window.clear();
+
+		window.draw(res.youLoseText);
+
+		window.display();
+	}
+}
+
+void GameMenuInit(GameMenu &menu, Resourses const &res)
+{
+	menu.newGameText.setFont(res.font);
+	menu.exitText.setFont(res.font);
+
+	menu.newGameText.setString("New game");
+	menu.exitText.setString("Exit");
+
+	menu.newGameText.setPosition(Vector2f(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2) - Vector2f(80, 50));
+	menu.exitText.setPosition(Vector2f(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2) - Vector2f(40, 0));
+}
+
+void DrawMenu(RenderWindow &window, GameMenu const &menu)
+{
+	window.clear();
+
+	window.draw(menu.newGameText);
+	window.draw(menu.exitText);
+
+	window.display();
+}
+
 int main()
 {
 	sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Game");
@@ -1198,6 +1292,8 @@ int main()
 	entities.heroArrow = CreateArrow(res, entities.hero, 0);
 
 
+	GameMenuInit(entities.menu, res);
+
 	while (window.isOpen())
 	{
 		float time = clock.getElapsedTime().asSeconds();
@@ -1205,40 +1301,8 @@ int main()
 
 		HandleEvents(window, entities, res);
 
-		if (entities.boss.currHP != 0 && entities.base.hp != 0)
-		{
-			Update(window, entities, res, time);
-
-			if (entities.spawner.deadEnemiesCount >= END_OF_WAVE)
-			{
-				BossUpdate(entities, res, time);
-			}
-			Render(window, entities);
-		}
-
-		if (entities.boss.currHP <= 0)
-		{
-			cout << "WIN!" << endl;
-			window.clear();
-
-			window.draw(res.youWinText);
-
-			window.display();
-		}
-
-		if (entities.base.hp <= 0)
-		{
-			cout << "LOSE!" << endl;
-			
-			window.clear();
-
-			window.draw(res.youLoseText);
-
-			window.display();
-		}
+		Game(window, entities, res, time);
 	}
-
-	
 
 	return 0;
 }
