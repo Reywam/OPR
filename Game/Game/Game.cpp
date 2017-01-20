@@ -212,7 +212,7 @@ MeeleEnemy CreateMeeleEnemy(Resourses const &res)
 	enemy.sprite.setTextureRect(IntRect(345, 0, 42, 50));
 
 	enemy.hp = 100;
-	enemy.damage = 15;
+	enemy.damage = 18;
 	enemy.attackSpeed = 2;
 
 	return enemy;
@@ -607,7 +607,7 @@ RangeEnemy CreateRangeEnemy(Resourses const &res)
 	enemy.sprite.setScale(1.5, 1.5);
 	enemy.sprite.setPosition(100, 300);
 	enemy.hp = 40;
-	enemy.damage = 10;
+	enemy.damage = 13;
 
 	enemy.state = movement;
 
@@ -968,13 +968,13 @@ void CreateBoss(GameEntities &entities, Resourses const &res)
 	entities.boss.sprite.setPosition(-100, (int)SCREEN_HEIGHT / 2);
 }
 
-void ChangeBossState(Boss &boss)
+void ChangeBossState(Boss &boss, float time)
 {
 	if (boss.state != dead)
 	{
 		if (boss.sprite.getPosition().x <= 40)
 		{
-			boss.sprite.move(3, 0);
+			boss.sprite.move(30 * time, 0);
 		}
 
 		if (boss.sprite.getPosition().y <= ((int)SCREEN_HEIGHT / 2 - 30))
@@ -993,19 +993,18 @@ void ChangeBossState(Boss &boss)
 	}
 }
 
-void BossActivities(Boss &boss)
+void BossActivities(Boss &boss, float time)
 {
 	switch (boss.state)
 	{
 	case down:
-		boss.sprite.move(0, 1);
+		boss.sprite.move(0, 10 * time);
 		break;
 	case up:
-		boss.sprite.move(0, -1);
+		boss.sprite.move(0, -10 * time);
 		break;
 	case dead:
-		cout << "Kek" << endl;
-		boss.sprite.move(-3, 0);
+		boss.sprite.move(-30 * time, 0);
 		break;
 	default:
 		break;
@@ -1064,11 +1063,11 @@ void CheckMinionsSpawnTime(Boss &boss, Resourses const &res)
 	}
 }
 
-void MoveMinions(vector<BossMinion> &minions)
+void MoveMinions(vector<BossMinion> &minions, float time)
 {
 	for (auto &minion : minions)
 	{
-		minion.sprite.move(2, 0);
+		minion.sprite.move(20 * time, 0);
 	}
 }
 
@@ -1197,13 +1196,13 @@ void CheckCollision(Hero const &hero, vector<Arrow> &arrows, Boss &boss)
 
 void BossUpdate(GameEntities &entities, Resourses const &res, float time)
 {
-	ChangeBossState(entities.boss);
-	BossActivities(entities.boss);
+	ChangeBossState(entities.boss, time);
+	BossActivities(entities.boss, time);
 
 	BossHPBarUpdate(entities.boss);
 	Update(entities.boss, time);
 	CheckMinionsSpawnTime(entities.boss, res);
-	MoveMinions(entities.boss.minions);
+	MoveMinions(entities.boss.minions, time);
 
 	CheckCollision(entities.hero, entities.heroArrows, entities.boss.minions);
 	CheckCollision(entities.base, entities.boss.minions);
