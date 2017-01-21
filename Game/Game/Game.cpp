@@ -10,7 +10,7 @@
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 500;
 
-const int BASE_HP = 1000;
+const int BASE_HP = 1500;
 
 const int SPAWN_TIME = 2;
 const int MINIONS_SPAWN_TIME = 20;
@@ -212,7 +212,7 @@ MeeleEnemy CreateMeeleEnemy(Resourses const &res)
 	enemy.sprite.setTextureRect(IntRect(345, 0, 42, 50));
 
 	enemy.hp = 100;
-	enemy.damage = 18;
+	enemy.damage = 13;
 	enemy.attackSpeed = 2;
 
 	return enemy;
@@ -224,7 +224,7 @@ void BaseInit(Base &base, Resourses const &res)
 	base.sprite.setTexture(base.image);
 	base.sprite.setPosition((float)(600 - base.image.getSize().x), 150);
 
-	base.hp = 1000;
+	base.hp = BASE_HP;
 }
 
 void HeroInit(Hero &hero, Resourses const &res)
@@ -1077,7 +1077,7 @@ void CheckCollision(Base &base, vector<BossMinion> &minions)
 	{
 		if (minion->sprite.getGlobalBounds().intersects(base.sprite.getGlobalBounds()))
 		{
-			base.hp -= 100;
+			base.hp -= 200;
 			minion->currHP = 0;
 		}
 	}
